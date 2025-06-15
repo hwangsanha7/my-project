@@ -26,8 +26,7 @@
 ### 2. 로컬 컴퓨터에 복제 (Clone)
 
 당신이 생성한 저장소를 로컬 컴퓨터로 다운로드합니다.
-
-# 'your-github-id'와 'your-repo-name'을 당신의 정보로 바꿔주세요.
+your-github-id'와 'your-repo-name'을 당신의 정보로 바꿔주세요.
 git clone https://github.com/your-github-id/your-repo-name.git
 cd your-repo-name
 
@@ -36,7 +35,7 @@ IGNORE_WHEN_COPYING_START
 Use code with caution. Markdown
 IGNORE_WHEN_COPYING_END
 
-3. 핵심 폴더에서 개발 시작
+### 3. 핵심 폴더에서 개발 시작
 
 이제 여러분이 신경 쓸 폴더는 딱 두 곳뿐입니다.
 
@@ -55,7 +54,7 @@ IGNORE_WHEN_COPYING_END
 🛠️ 프로젝트 맞춤 설정 (Customization)
 
 이 프레임워크를 당신의 프로젝트에 맞게 수정하는 방법입니다.
-1. 패키지 이름 변경하기
+### 1. 패키지 이름 변경하기
 
 현재 기본 패키지 이름은 my_robot_pkg입니다. 만약 drone_control 같은 다른 이름으로 바꾸고 싶다면, 아래 파일들에서 my_robot_pkg를 당신의 새 패키지 이름으로 모두 변경해주세요.
 
@@ -67,11 +66,11 @@ IGNORE_WHEN_COPYING_END
 
     .github/workflows/ci.yml
 
-2. 새로운 Python 라이브러리 추가하기
+### 2. 새로운 Python 라이브러리 추가하기
 
     requirements.txt 파일을 열고, 필요한 라이브러리 이름(예: pandas)을 새로운 줄에 추가하고 저장합니다.
 
-3. 새로운 실행 노드(Node) 추가하기
+### 3. 새로운 실행 노드(Node) 추가하기
 
     src/my_robot_pkg/setup.py 파일을 열고, entry_points 섹션의 console_scripts 리스트에 당신의 노드를 추가합니다.
 
