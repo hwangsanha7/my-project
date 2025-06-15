@@ -42,44 +42,36 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-ros-humble-
 
-      # ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ 이 스텝이 수정되었습니다 ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
       - name: 6. Set up ROS 2 Humble and Install Dependencies
         run: |
-          # 1. ROS 2 패키지 저장소(Repository)를 먼저 추가합니다.
           sudo apt-get update
           sudo apt-get install -y software-properties-common curl
           sudo add-apt-repository universe
           sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
           echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
-          
-          # 2. ROS 저장소를 추가했으므로, 패키지 목록을 다시 업데이트합니다.
           sudo apt-get update
-
-          # 3. 이제 python3-rosdep 패키지를 정상적으로 설치할 수 있습니다.
           sudo apt-get install -y python3-rosdep xvfb
-          
-          # 4. 기존 rosdep 초기화 및 의존성 설치 과정은 그대로 실행합니다.
           sudo rosdep init || true
           rosdep update
           rosdep install --from-paths src --ignore-src -y -r --rosdistro humble
-      # ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ 여기까지가 수정된 부분입니다 ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
       - name: 7. Start virtual display
         run: Xvfb :99 -screen 0 1024x768x16 &
 
+      # ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ 이 스텝이 수정되었습니다 ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
       - name: 8. Build, Lint and Test with colcon
         env:
           DISPLAY: ":99"
         run: |
-          source /opt/ros/humble/setup.bash
-          
-          # 린팅 실행
-          find src -name "*.py" -print0 | xargs -0 pylint --rcfile=./.pylintrc || true
-          
-          # 빌드 및 테스트 실행
-          colcon build --packages-select my_robot_pkg
-          source install/setup.bash
+          # ROS 환경을 source 하고 모든 명령어를 '&&'로 연결해 하나의 쉘에서 실행합니다.
+          # 이렇게 하면 'colcon: command not found' 오류가 해결됩니다.
+          # '|| true' 덕분에 pylint가 오류를 보고해도 워크플로우는 중단되지 않습니다.
+          source /opt/ros/humble/setup.bash && \
+          find src -name "*.py" -print0 | xargs -0 pylint --rcfile=./.pylintrc || true && \
+          colcon build --packages-select my_robot_pkg && \
+          source install/setup.bash && \
           colcon test --packages-select my_robot_pkg --event-handlers console_direct+
+      # ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ 여기까지가 수정된 부분입니다 ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
       - name: 9. Upload logs as artifact
         if: always()
