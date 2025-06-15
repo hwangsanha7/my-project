@@ -1,27 +1,22 @@
-# .github/workflows/ci.yml (캐싱 적용 최종 버전)
-
-name: My Robot CI
+name: My Robot CI (Fully Optimized with Permission Fix)
 
 on:
   pull_request:
     branches: [ main ]
-  # push:
-  #   branches: [ develop ]
 
 jobs:
-  linting:
-    name: Code Style Check (Pylint)
+  build-lint-test:
+    name: Build, Lint and Test
     runs-on: ubuntu-22.04
     steps:
       - name: 1. Checkout repository code
         uses: actions/checkout@v4
-      
+
       - name: 2. Set up Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      # ★★★ 린팅 단계에도 파이썬 라이브러리 캐싱 추가 ★★★
       - name: 3. Cache pip dependencies
         uses: actions/cache@v4
         with:
@@ -35,70 +30,51 @@ jobs:
           python -m pip install --upgrade pip
           pip install pylint
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-      
-      - name: 5. Run Pylint and generate log
-        run: |
-          # ... (이전과 동일)
-          find src -name "*.py" -print0 > python_files.list
-          xargs -0 pylint --rcfile=./.pylintrc < python_files.list > pylint-log.txt || true
-      
-      - name: 6. Upload Pylint log as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: pylint-log
-          path: pylint-log.txt
 
-  build-and-test:
-    name: ROS2 Build and Test
-    needs: linting
-    runs-on: ubuntu-22.04
-    steps:
-      - name: 1. Checkout repository code
-        uses: actions/checkout@v4
-
-      - name: 2. Set up ROS 2 Humble
-        uses: ros-tooling/setup-ros@v0.7
-        with:
-          required-ros-distributions: humble
-
-      # ★★★★★ 이 부분이 핵심입니다: ROS 의존성 캐싱 ★★★★★
-      - name: 3. Cache ROS dependencies
+      # ★★★★★ 이 부분이 핵심입니다 ★★★★★
+      - name: 5. Cache ROS dependencies
         uses: actions/cache@v4
         with:
-          # 캐시할 대상 폴더: /var/lib/apt/lists 와 /var/cache/rosdep
           path: |
             /var/lib/apt/lists
+            /var/cache/apt/archives
             ~/.ros/rosdep
-          # 캐시 키: OS, ROS 배포판, 그리고 패키지 설정 파일(package.xml)의 내용이 바뀔 때만 캐시를 새로 만듭니다.
-          key: ${{ runner.os }}-ros-${{ env.ROS_DISTRO }}-${{ hashFiles('**/package.xml') }}
+          key: ${{ runner.os }}-ros-humble-${{ hashFiles('**/package.xml') }}
           restore-keys: |
-            ${{ runner.os }}-ros-${{ env.ROS_DISTRO }}-
+            ${{ runner.os }}-ros-humble-
 
-      - name: 4. Install ROS dependencies
+      - name: 6. Set up ROS 2 Humble and Install Dependencies
+        # 이제 설치 과정을 하나의 단계로 통합합니다.
         run: |
+          # 관리자 권한으로 시스템을 업데이트하고 필요한 도구를 설치합니다.
           sudo apt-get update
           sudo apt-get install -y python3-rosdep xvfb
-          # rosdep init은 캐시가 없을 때만 실행되도록 조건을 추가할 수 있습니다.
-          if [ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]; then
-            sudo rosdep init
-          fi
+          
+          # rosdep을 초기화하고 업데이트합니다.
+          sudo rosdep init || true
           rosdep update
+          
+          # rosdep을 이용해 모든 의존성을 설치합니다.
           rosdep install --from-paths src --ignore-src -y -r --rosdistro humble
 
-      - name: 5. Start virtual display for GUI tests
+      - name: 7. Start virtual display
         run: Xvfb :99 -screen 0 1024x768x16 &
 
-      - name: 6. Build and Run tests with colcon
+      - name: 8. Build, Lint and Test with colcon
         env:
           DISPLAY: ":99"
         run: |
-          # ... (이전과 동일)
           source /opt/ros/humble/setup.bash
+          
+          # 린팅 실행
+          find src -name "*.py" -print0 | xargs -0 pylint --rcfile=./.pylintrc || true
+          
+          # 빌드 및 테스트 실행
           colcon build --packages-select my_robot_pkg
           source install/setup.bash
           colcon test --packages-select my_robot_pkg --event-handlers console_direct+
 
-      - name: 7. Upload build/test logs as artifact
+      - name: 9. Upload logs as artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
