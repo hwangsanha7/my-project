@@ -1,21 +1,14 @@
-# .github/workflows/ci.yml
+# .github/workflows/ci.yml (캐싱 적용 최종 버전)
 
-# 워크플로우 이름
 name: My Robot CI
 
-# 워크플로우 트리거 조건
 on:
-  # main 브랜치로 향하는 풀 리퀘스트가 생성되거나 업데이트될 때 실행
   pull_request:
     branches: [ main ]
-  # (선택 사항) 개발 브랜치에 직접 push할 때도 실행하고 싶다면 주석을 해제하세요.
   # push:
   #   branches: [ develop ]
 
 jobs:
-  # ====================================================================
-  # 잡 1: 린팅 (코드 스타일 검사)
-  # ====================================================================
   linting:
     name: Code Style Check (Pylint)
     runs-on: ubuntu-22.04
@@ -28,35 +21,36 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: 3. Install Python dependencies
+      # ★★★ 린팅 단계에도 파이썬 라이브러리 캐싱 추가 ★★★
+      - name: 3. Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: 4. Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install pylint
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       
-      - name: 4. Run Pylint and generate log
+      - name: 5. Run Pylint and generate log
         run: |
-          echo "--- Finding all python files in src directory ---"
+          # ... (이전과 동일)
           find src -name "*.py" -print0 > python_files.list
-          echo "--- Running Pylint on the following files: ---"
-          cat python_files.list | xargs -0 -n1 # 파일 목록을 한 줄씩 출력
-          
-          # xargs를 사용해 목록에 있는 파일들을 Pylint로 전달합니다.
-          # || true 덕분에 점수가 낮아도 이 단계는 항상 성공으로 처리됩니다.
           xargs -0 pylint --rcfile=./.pylintrc < python_files.list > pylint-log.txt || true
       
-      - name: 5. Upload Pylint log as artifact
+      - name: 6. Upload Pylint log as artifact
         uses: actions/upload-artifact@v4
         with:
           name: pylint-log
           path: pylint-log.txt
 
-  # ====================================================================
-  # 잡 2: 빌드 및 테스트 (핵심 기능 검증)
-  # ====================================================================
   build-and-test:
     name: ROS2 Build and Test
-    needs: linting # linting 잡이 성공해야 이 잡이 실행됩니다.
+    needs: linting
     runs-on: ubuntu-22.04
     steps:
       - name: 1. Checkout repository code
@@ -67,36 +61,44 @@ jobs:
         with:
           required-ros-distributions: humble
 
-      - name: 3. Install ROS dependencies
+      # ★★★★★ 이 부분이 핵심입니다: ROS 의존성 캐싱 ★★★★★
+      - name: 3. Cache ROS dependencies
+        uses: actions/cache@v4
+        with:
+          # 캐시할 대상 폴더: /var/lib/apt/lists 와 /var/cache/rosdep
+          path: |
+            /var/lib/apt/lists
+            ~/.ros/rosdep
+          # 캐시 키: OS, ROS 배포판, 그리고 패키지 설정 파일(package.xml)의 내용이 바뀔 때만 캐시를 새로 만듭니다.
+          key: ${{ runner.os }}-ros-${{ env.ROS_DISTRO }}-${{ hashFiles('**/package.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-ros-${{ env.ROS_DISTRO }}-
+
+      - name: 4. Install ROS dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y python3-rosdep xvfb
-          sudo rosdep init || true
+          # rosdep init은 캐시가 없을 때만 실행되도록 조건을 추가할 수 있습니다.
+          if [ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]; then
+            sudo rosdep init
+          fi
           rosdep update
-          # -r 옵션: 일부 의존성 설치에 실패해도 계속 진행
           rosdep install --from-paths src --ignore-src -y -r --rosdistro humble
 
-      - name: 4. Start virtual display for GUI tests
+      - name: 5. Start virtual display for GUI tests
         run: Xvfb :99 -screen 0 1024x768x16 &
 
-      - name: 5. Build and Run tests with colcon
+      - name: 6. Build and Run tests with colcon
         env:
-          # 가상 디스플레이를 사용하도록 환경 변수 설정
           DISPLAY: ":99"
         run: |
-          # ROS2 환경 활성화
+          # ... (이전과 동일)
           source /opt/ros/humble/setup.bash
-          
-          echo "--- Starting build for my_robot_pkg ---"
           colcon build --packages-select my_robot_pkg
-          
-          echo "--- Starting tests for my_robot_pkg ---"
-          # 빌드 후 생성된 환경을 다시 활성화
           source install/setup.bash
           colcon test --packages-select my_robot_pkg --event-handlers console_direct+
 
-      - name: 6. Upload build/test logs as artifact
-        # 테스트가 실패해도 로그 분석을 위해 아티팩트는 항상 업로드합니다.
+      - name: 7. Upload build/test logs as artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
