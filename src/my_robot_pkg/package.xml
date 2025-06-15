@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <!-- 1. 패키지 이름: setup.py와 일치해야 합니다. -->
+  <name>my_robot_pkg</name>
+  
+  <!-- 2. 버전 및 설명 -->
+  <version>0.0.1</version>
+  <description>My custom robot package for autonomous driving project.</description>
+  
+  <!-- 3. 관리자 정보 -->
+  <maintainer email="your_email@email.com">Your Name</maintainer>
+  
+  <!-- 4. 라이선스 정보 -->
+  <license>Apache License 2.0</license>
+
+  <!-- 5. 빌드 도구 의존성 -->
+  <!-- 이 패키지는 ament_python을 사용하여 빌드됩니다. -->
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <!-- 6. 테스트 의존성 -->
+  <!-- 테스트를 위해 ament_lint_auto, ament_pylint, pytest가 필요합니다. -->
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_pylint</test_depend>
+  <test_depend>pytest</test_depend>
+
+  <!-- 7. 실행 의존성 (가장 중요) -->
+  <!-- 이 패키지를 실행하기 위해 필요한 ROS2 패키지 목록입니다. -->
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <!-- 만약 다른 메시지 타입을 사용한다면 여기에 추가해야 합니다. 예: <exec_depend>sensor_msgs</exec_depend> -->
+
+  <!-- 8. 패키지 내보내기 정보 -->
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
