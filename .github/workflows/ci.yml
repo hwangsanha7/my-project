@@ -31,7 +31,6 @@ jobs:
           pip install pylint
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      # ★★★★★ 이 부분이 핵심입니다 ★★★★★
       - name: 5. Cache ROS dependencies
         uses: actions/cache@v4
         with:
@@ -43,19 +42,27 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-ros-humble-
 
+      # ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ 이 스텝이 수정되었습니다 ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
       - name: 6. Set up ROS 2 Humble and Install Dependencies
-        # 이제 설치 과정을 하나의 단계로 통합합니다.
         run: |
-          # 관리자 권한으로 시스템을 업데이트하고 필요한 도구를 설치합니다.
+          # 1. ROS 2 패키지 저장소(Repository)를 먼저 추가합니다.
           sudo apt-get update
+          sudo apt-get install -y software-properties-common curl
+          sudo add-apt-repository universe
+          sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+          
+          # 2. ROS 저장소를 추가했으므로, 패키지 목록을 다시 업데이트합니다.
+          sudo apt-get update
+
+          # 3. 이제 python3-rosdep 패키지를 정상적으로 설치할 수 있습니다.
           sudo apt-get install -y python3-rosdep xvfb
           
-          # rosdep을 초기화하고 업데이트합니다.
+          # 4. 기존 rosdep 초기화 및 의존성 설치 과정은 그대로 실행합니다.
           sudo rosdep init || true
           rosdep update
-          
-          # rosdep을 이용해 모든 의존성을 설치합니다.
           rosdep install --from-paths src --ignore-src -y -r --rosdistro humble
+      # ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ 여기까지가 수정된 부분입니다 ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
       - name: 7. Start virtual display
         run: Xvfb :99 -screen 0 1024x768x16 &
