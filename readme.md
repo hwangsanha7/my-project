@@ -11,19 +11,6 @@
 *   **표준화된 개발 환경:** 모든 팀원이 동일한 규칙과 환경에서 개발하여 "제 컴퓨터에서는 잘 됐는데요?"와 같은 문제를 원천적으로 방지합니다.
 *   **개발 효율성 극대화:** 개발자는 기계가 할 수 있는 반복적인 검증 작업에서 해방되어, 오직 창의적인 로직 개발에만 집중할 수 있습니다.
       
-# ROS2 Python Project Framework
-
-이 저장소는 **ROS2 Humble과 Python을 사용하는 모든 프로젝트**를 위한 고성능 개발 프레임워크 템플릿입니다.
-전문적인 개발 환경을 위해, 코드 품질 검사와 빌드/테스트를 자동화하는 CI/CD 파이프라인이 기본적으로 설정되어 있습니다. 이 템플릿을 사용하면, 어떤 ROS2 프로젝트든 초기 설정의 고통 없이 즉시 핵심 로직 개발에 집중할 수 있습니다.
-
----
-
-## ✨ 주요 특징
-
-*   **자동화된 코드 검증 (CI):** Pull Request를 생성할 때마다 GitHub Actions가 자동으로 코드 스타일(Pylint)을 검사하고, `colcon`을 이용해 빌드 및 단위 테스트를 실행합니다.
-*   **표준화된 개발 환경:** 모든 팀원이 동일한 규칙과 환경에서 개발하여 "제 컴퓨터에서는 잘 됐는데요?"와 같은 문제를 원천적으로 방지합니다.
-*   **개발 효율성 극대화:** 개발자는 기계가 할 수 있는 반복적인 검증 작업에서 해방되어, 오직 창의적인 로직 개발에만 집중할 수 있습니다.
-*   **고속 CI 파이프라인:** ROS 의존성 캐싱을 적용하여, 두 번째 실행부터는 CI/CD 실행 시간을 1~2분 내외로 단축했습니다.
 
 ---
 
@@ -45,28 +32,10 @@ git clone https://github.com/your-github-id/your-repo-name.git
 cd your-repo-name
 
     
-
 IGNORE_WHEN_COPYING_START
 Use code with caution. Markdown
 IGNORE_WHEN_COPYING_END
-3. 핵심 폴더에서 개발 시작
 
-이제 여러분이 신경 쓸 폴더는 딱 두 곳뿐입니다.
-
-    핵심 로직 코드 작성:
-
-        위치: src/my_robot_pkg/my_robot_pkg/
-
-        설명: 여러분의 모든 Python 노드 파일(talker.py, motor_controller.py 등)을 이곳에 작성하고 저장하세요.
-
-    단위 테스트 코드 작성:
-
-        위치: src/my_robot_pkg/test/
-
-        설명: 여러분이 만든 기능이 약속대로 작동하는지 검증하기 위한 테스트 코드를 이곳에 test_로 시작하는 파일명으로 작성하세요.
-
- Use code with caution. Markdown
-IGNORE_WHEN_COPYING_END
 3. 핵심 폴더에서 개발 시작
 
 이제 여러분이 신경 쓸 폴더는 딱 두 곳뿐입니다.
