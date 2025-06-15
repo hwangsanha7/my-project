@@ -16,10 +16,11 @@ setup(
     # 이 설정은 colcon에게 "my_robot_pkg 라는 이름의 파이썬 패키지를 찾아라" 라고 알려줍니다.
     packages=[package_name],
     
-    data_files=[
+   data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        # 만약 launch 파일이 있다면 아래와 같이 추가
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
     ],
     install_requires=['setuptools'],
