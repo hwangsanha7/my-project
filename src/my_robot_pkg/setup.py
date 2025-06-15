@@ -9,9 +9,11 @@ package_name = 'my_robot_pkg'
 setup(
     name=package_name,
     version='0.0.1',
-    # ★★★★★ packages 항목을 다시 명시적으로 지정합니다. ★★★★★
-    # find_packages() 대신, 우리 패키지의 이름(폴더명)을 직접 리스트에 넣어줍니다.
-    # 이렇게 하면 colcon이 패키지의 위치를 절대 헷갈리지 않습니다.
+    # ★★★★★ 이 부분이 핵심입니다 ★★★★★
+    # 'my_robot_pkg' 패키지 안에 있는 모든 파이썬 패키지를 찾으라고 명시합니다.
+    # find_packages()를 사용하지 않고, 실제 Python 모듈이 있는 폴더 이름을 직접 지정합니다.
+    # 만약 talker.py, listener.py가 my_robot_pkg 폴더 바로 아래 있다면,
+    # 이 설정은 colcon에게 "my_robot_pkg 라는 이름의 파이썬 패키지를 찾아라" 라고 알려줍니다.
     packages=[package_name],
     
     data_files=[
@@ -29,7 +31,6 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            # ★★★ entry_points의 형식도 패키지 이름으로 시작해야 합니다. ★★★
             'talker = my_robot_pkg.talker:main',
             'listener = my_robot_pkg.listener:main',
         ],
