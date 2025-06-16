@@ -3,7 +3,7 @@
 import unittest
 import rclpy
 from std_msgs.msg import String
-from picar_pkg.talker import TalkerNode # talker.py에서 TalkerNode를 가져옵니다.
+from my_robot_pkg.talker import TalkerNode  # 'picar_pkg'를 'my_robot_pkg'로 변경
 
 class TestTalkerNode(unittest.TestCase):
 
