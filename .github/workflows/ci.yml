@@ -60,30 +60,65 @@ jobs:
           rosdep install --from-paths src --ignore-src -y -r --rosdistro humble
       - name: 7. Start virtual display
         run: Xvfb :99 -screen 0 1024x768x16 &
-      - name: 7.5 Fix Cache Permissions
+      - name: 8. Fix Cache Permissions
         run: |
           sudo chown -R runner:runner /var/lib/apt/lists /var/cache/apt/archives ~/.ros/rosdep
 
       # ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ 이 스텝이 수정되었습니다 ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-      - name: 8. Build, Lint and Test with colcon
+      # ▼▼▼▼▼▼▼▼▼▼ 기존 9번, 10번 스텝을 아래 내용으로 교체합니다 ▼▼▼▼▼▼▼▼▼▼
+
+      # 9. 빌드, 린트 및 테스트 실행
+      - name: 9. Build, Lint and Test with colcon
         env:
           DISPLAY: ":99"
         run: |
-          # ROS 환경을 source 하고 모든 명령어를 '&&'로 연결해 하나의 쉘에서 실행합니다.
-          # 이렇게 하면 'colcon: command not found' 오류가 해결됩니다.
-          # '|| true' 덕분에 pylint가 오류를 보고해도 워크플로우는 중단되지 않습니다.
           source /opt/ros/humble/setup.bash && \
           find src -name "*.py" -print0 | xargs -0 pylint --rcfile=./.pylintrc || true && \
           colcon build --packages-select my_robot_pkg && \
           source install/setup.bash && \
-          colcon test --packages-select my_robot_pkg --event-handlers console_direct+
-      # ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ 여기까지가 수정된 부분입니다 ▲▲▲▲▲▲▲▲▲▲▲▲
-      - name: 9. Upload logs as artifact
+          
+          # colcon test 실행. || true를 붙여서 테스트가 실패해도 워크플로우가 중단되지 않게 함
+          # --pytest-args 로 결과를 junit.xml 파일로 저장
+          colcon test --packages-select my_robot_pkg \
+            --event-handlers console_direct+ \
+            --pytest-args "--junitxml=build/my_robot_pkg/pytest.xml" || true
+
+      # 10. 한글 테스트 결과 보고서 생성 및 업로드
+      - name: 10. Generate and Upload Report
+        # if: always()를 통해 앞선 스텝의 성공/실패 여부와 관계없이 항상 실행
+        if: always()
+        run: |
+          echo "## 🤖 CI 테스트 결과 보고서" > report.md
+          echo "" >> report.md
+          
+          # pytest.xml 파일이 존재하는지 확인
+          if [ -f "build/my_robot_pkg/pytest.xml" ]; then
+            # pytest-junit-to-markdown 도구를 설치 (없을 경우)
+            pip install pytest-junit-to-markdown
+            
+            # XML 결과를 마크다운(한글)으로 변환
+            junit-xml-to-md build/my_robot_pkg/pytest.xml >> report.md
+            
+            echo "" >> report.md
+            echo "---" >> report.md
+            echo "### 📋 상세 로그" >> report.md
+            echo "아래 'Artifacts' 섹션에서 'test-logs'를 다운로드하여 전체 로그를 확인하세요." >> report.md
+          else
+            echo "테스트 결과 파일(pytest.xml)을 찾을 수 없습니다." >> report.md
+            echo "테스트 실행 단계에서 오류가 발생했을 수 있습니다." >> report.md
+          fi
+          
+          # 생성된 보고서를 GitHub Actions의 요약(Summary) 페이지에 표시
+          cat report.md >> $GITHUB_STEP_SUMMARY
+
+      # 11. 전체 로그 및 보고서 아티팩트로 업로드
+      - name: 11. Upload Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-and-test-logs
+          name: test-logs-and-report
           path: |
             build/
             install/
             log/
+            report.md # 생성된 한글 보고서도 함께 업로드
