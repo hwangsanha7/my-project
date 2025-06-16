@@ -13,19 +13,16 @@ jobs:
     name: Build, Lint and Test
     runs-on: ubuntu-22.04
     steps:
-      # 1. 소스 코드 가져오기 (src 폴더 안으로)
       - name: 1. Checkout repository code
         uses: actions/checkout@v4
         with:
           path: src
 
-      # 2. 파이썬 환경 설정
       - name: 2. Set up Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      # 3. Pip 캐시 복원
       - name: 3. Restore pip cache
         id: cache-pip
         uses: actions/cache@v4
@@ -35,7 +32,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      # 4. 파이썬 의존성 설치
       - name: 4. Install Python dependencies
         if: steps.cache-pip.outputs.cache-hit != 'true'
         run: |
@@ -43,7 +39,6 @@ jobs:
           pip install pylint
           if [ -f src/requirements.txt ]; then pip install -r src/requirements.txt; fi
 
-      # 5. ROS 캐시 복원
       - name: 5. Restore ROS cache
         id: cache-ros
         uses: actions/cache@v4
@@ -56,93 +51,71 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-ros-humble-
 
-      # 6. ROS 2 및 시스템 의존성 설치
+      # 6. ROS 2 및 시스템 의존성 설치 (명령어 순서 수정됨)
       - name: 6. Set up ROS 2 and Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y software-properties-common curl ros-dev-tools xvfb
+          sudo apt-get install -y software-properties-common curl
           sudo add-apt-repository universe -y
           sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
           echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+          
           sudo apt-get update
+          
+          sudo apt-get install -y ros-dev-tools xvfb
           
           sudo rosdep init || true
           rosdep update
           
           rosdep install --from-paths src --ignore-src -y -r --rosdistro humble
 
-      # 7. 캐시 저장을 위한 권한 수정
       - name: 7. Fix Cache Permissions
         if: always()
         run: |
           sudo chown -R runner:runner /var/lib/apt/lists /var/cache/apt/archives ~/.ros/rosdep
 
-      # 8. 가상 디스플레이 시작
       - name: 8. Start virtual display
         run: Xvfb :99 -screen 0 1024x768x16 &
 
-      # 9. 소스 코드 린트(Lint) 실행
       - name: 9. Lint Source Code
         run: |
           source /opt/ros/humble/setup.bash
           colcon lint --packages-select my_robot_pkg
 
-      # 10. 패키지 빌드
       - name: 10. Build Packages
         run: |
           source /opt/ros/humble/setup.bash
           colcon build --packages-select my_robot_pkg
 
-      # 11. 패키지 테스트
       - name: 11. Test Packages
         env:
           DISPLAY: ":99"
         run: |
           source install/setup.bash
-          # 테스트가 실패해도 워크플로우가 계속 진행되도록 || true 추가
           colcon test --packages-select my_robot_pkg \
             --event-handlers console_direct+ \
             --pytest-args "--junitxml=build/my_robot_pkg/pytest.xml" || true
 
-      # 12. 한글 테스트 결과 보고서 생성 및 요약 (스크립트 버전)
       - name: 12. Generate and Post Report
         if: always()
         run: |
-          echo "## 🤖 CI 테스트 결과 보고서" > report.md
-          echo "" >> report.md
-          
+          echo "## 🤖 CI 테스트 결과 보고서" > report.md; echo "" >> report.md
           XML_FILE="build/my_robot_pkg/pytest.xml"
-
           if [ -f "$XML_FILE" ]; then
-            TEST_COUNT=$(grep -oP '(?<=tests=")\d+' "$XML_FILE")
-            ERROR_COUNT=$(grep -oP '(?<=errors=")\d+' "$XML_FILE")
-            FAILURE_COUNT=$(grep -oP '(?<=failures=")\d+' "$XML_FILE")
-            
-            echo "### 📝 테스트 요약" >> report.md
-            echo "- **총 테스트**: $TEST_COUNT 개" >> report.md
-            echo "- **에러**: $ERROR_COUNT 개" >> report.md
-            echo "- **실패**: $FAILURE_COUNT 개" >> report.md
-            echo "" >> report.md
-            
+            TEST_COUNT=$(grep -oP '(?<=tests=")\d+' "$XML_FILE"); ERROR_COUNT=$(grep -oP '(?<=errors=")\d+' "$XML_FILE"); FAILURE_COUNT=$(grep -oP '(?<=failures=")\d+' "$XML_FILE")
+            echo "### 📝 테스트 요약" >> report.md; echo "- **총 테스트**: $TEST_COUNT 개" >> report.md; echo "- **에러**: $ERROR_COUNT 개" >> report.md; echo "- **실패**: $FAILURE_COUNT 개" >> report.md; echo "" >> report.md
             if [ "$ERROR_COUNT" -gt 0 ] || [ "$FAILURE_COUNT" -gt 0 ]; then
-              echo "### ❌ 실패/에러 상세 내용" >> report.md
-              echo "\`\`\`xml" >> report.md
-              # failure 또는 error 태그를 포함하는 testcase 블록 전체를 추출
+              echo "### ❌ 실패/에러 상세 내용" >> report.md; echo "\`\`\`xml" >> report.md
               sed -n '/<testcase/,/<\/testcase>/p' "$XML_FILE" | grep -E "<failure|<error" -B 10 -A 10 >> report.md
               echo "\`\`\`" >> report.md
             else
               echo "### ✅ 모든 테스트를 통과했습니다!" >> report.md
             fi
-            
           else
-            echo "### ⚠️ 테스트 결과 파일 없음" >> report.md
-            echo "테스트 결과 파일($XML_FILE)을 찾을 수 없습니다." >> report.md
-            echo "이전 단계에서 심각한 오류가 발생하여 테스트가 실행되지 않았을 수 있습니다." >> report.md
+            echo "### ⚠️ 테스트 결과 파일 없음" >> report.md; echo "테스트 결과 파일($XML_FILE)을 찾을 수 없습니다." >> report.md; echo "이전 단계에서 심각한 오류가 발생하여 테스트가 실행되지 않았을 수 있습니다." >> report.md
           fi
-          
           cat report.md >> $GITHUB_STEP_SUMMARY
 
-      # 13. 전체 로그 및 보고서 아티팩트로 업로드
       - name: 13. Upload Artifacts
         if: always()
         uses: actions/upload-artifact@v4
