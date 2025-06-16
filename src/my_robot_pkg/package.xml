@@ -23,7 +23,11 @@
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_pylint</test_depend>
   <test_depend>pytest</test_depend>
-
+  <!-- package.xml 파일 안에 아래 내용을 추가하세요 -->
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
   <!-- 7. 실행 의존성 (가장 중요) -->
   <!-- 이 패키지를 실행하기 위해 필요한 ROS2 패키지 목록입니다. -->
   <exec_depend>rclpy</exec_depend>
