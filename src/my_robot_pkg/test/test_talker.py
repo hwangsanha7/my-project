@@ -12,7 +12,7 @@ class TestTalkerNode(unittest.TestCase):
         rclpy.init()
 
     @classmethod
-def tearDownClass(cls):
+    def tearDownClass(cls):
         rclpy.shutdown()
 
     def test_published_message_content(self):
