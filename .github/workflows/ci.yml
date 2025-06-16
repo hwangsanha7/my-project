@@ -74,8 +74,7 @@ jobs:
           colcon build --packages-select my_robot_pkg && \
           source install/setup.bash && \
           colcon test --packages-select my_robot_pkg --event-handlers console_direct+
-      # ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ 여기까지가 수정된 부분입니다 ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-
+      # ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ 여기까지가 수정된 부분입니다 ▲▲▲▲▲▲▲▲▲▲▲▲
       - name: 9. Upload logs as artifact
         if: always()
         uses: actions/upload-artifact@v4
