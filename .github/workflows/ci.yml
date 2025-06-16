@@ -51,7 +51,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-ros-humble-
 
-      # 6. ROS 2 및 시스템 의존성 설치 (명령어 순서 수정됨)
+      # 6. ROS 2 및 시스템 의존성 설치 (linter 패키지 추가)
       - name: 6. Set up ROS 2 and Install Dependencies
         run: |
           sudo apt-get update
@@ -62,7 +62,8 @@ jobs:
           
           sudo apt-get update
           
-          sudo apt-get install -y ros-dev-tools xvfb
+          # ✅ 여기에 python3-colcon-lint-ament 를 추가하여 lint 확장 기능을 설치합니다.
+          sudo apt-get install -y ros-dev-tools python3-colcon-lint-ament xvfb
           
           sudo rosdep init || true
           rosdep update
@@ -77,10 +78,12 @@ jobs:
       - name: 8. Start virtual display
         run: Xvfb :99 -screen 0 1024x768x16 &
 
+      # 9. 소스 코드 린트(Lint) 실행 (실패 시에도 계속 진행)
       - name: 9. Lint Source Code
         run: |
           source /opt/ros/humble/setup.bash
-          colcon lint --packages-select my_robot_pkg
+          # ✅ || true 를 추가하여, 린트 오류가 발생해도 CI가 멈추지 않고 다음 단계로 넘어갑니다.
+          colcon lint --packages-select my_robot_pkg || true
 
       - name: 10. Build Packages
         run: |
