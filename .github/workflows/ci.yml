@@ -37,6 +37,10 @@ jobs:
           pip install pylint
           if [ -f src/requirements.txt ]; then pip install -r src/requirements.txt; fi
 
+      - name: 4.1. Install colcon linter via pip
+        run: |
+          pip install colcon-lint-ament
+
       - name: 5. Restore ROS cache
         id: cache-ros
         uses: actions/cache@v4
@@ -49,7 +53,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-ros-humble-
 
-      # 6. ROS 2 및 시스템 의존성 설치 (오타 수정 및 추가 패키지 설치)
+      # 6. ROS 2 및 시스템 의존성 설치 (수정된 내용 반영)
       - name: 6. Set up ROS 2 and Install Dependencies
         run: |
           sudo apt-get update
@@ -60,16 +64,14 @@ jobs:
           
           sudo apt-get update
           
-          # 오타 수정: python3-colcon-lint-ament가 올바른 패키지명입니다.
-          # 또한, colcon 빌드를 위한 python3-colcon-common-extensions도 함께 설치할 수 있습니다.
-          sudo apt-get install -y ros-dev-tools python3-colcon-lint-ament python3-colcon-common-extensions xvfb
+          # python3-colcon-lint-ament 제거, 대신 필요한 패키지만 설치합니다.
+          sudo apt-get install -y ros-dev-tools python3-colcon-common-extensions xvfb
           
           sudo rosdep init || true
           rosdep update
           
           rosdep install --from-paths src --ignore-src -y -r --rosdistro humble
 
-      # 7. Cache 권한 수정 전에 디렉토리 생성
       - name: 7. Fix Cache Permissions
         if: always()
         run: |
@@ -79,7 +81,6 @@ jobs:
       - name: 8. Start virtual display
         run: Xvfb :99 -screen 0 1024x768x16 &
 
-      # 9. 소스 코드 린트(Lint) 실행 (실패 시에도 계속 진행)
       - name: 9. Lint Source Code
         run: |
           source /opt/ros/humble/setup.bash
