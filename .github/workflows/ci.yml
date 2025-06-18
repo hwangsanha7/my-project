@@ -1,5 +1,3 @@
-# .github/workflows/ros2_ci.yml
-
 name: My Robot CI (Fully Optimized & Stable)
 
 on:
@@ -51,7 +49,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-ros-humble-
 
-      # 6. ROS 2 및 시스템 의존성 설치 (linter 패키지 추가)
+      # 6. ROS 2 및 시스템 의존성 설치 (오타 수정 및 추가 패키지 설치)
       - name: 6. Set up ROS 2 and Install Dependencies
         run: |
           sudo apt-get update
@@ -62,17 +60,20 @@ jobs:
           
           sudo apt-get update
           
-          # ✅ 여기에 python3-colcon-lint-ament 를 추가하여 lint 확장 기능을 설치합니다.
-          sudo apt-get install -y ros-dev-tools python3-colcon-lint-ament xvfb
+          # 오타 수정: python3-colcon-lint-ament가 올바른 패키지명입니다.
+          # 또한, colcon 빌드를 위한 python3-colcon-common-extensions도 함께 설치할 수 있습니다.
+          sudo apt-get install -y ros-dev-tools python3-colcon-lint-ament python3-colcon-common-extensions xvfb
           
           sudo rosdep init || true
           rosdep update
           
           rosdep install --from-paths src --ignore-src -y -r --rosdistro humble
 
+      # 7. Cache 권한 수정 전에 디렉토리 생성
       - name: 7. Fix Cache Permissions
         if: always()
         run: |
+          sudo mkdir -p ~/.ros/rosdep
           sudo chown -R runner:runner /var/lib/apt/lists /var/cache/apt/archives ~/.ros/rosdep
 
       - name: 8. Start virtual display
@@ -82,7 +83,6 @@ jobs:
       - name: 9. Lint Source Code
         run: |
           source /opt/ros/humble/setup.bash
-          # ✅ || true 를 추가하여, 린트 오류가 발생해도 CI가 멈추지 않고 다음 단계로 넘어갑니다.
           colcon lint --packages-select my_robot_pkg || true
 
       - name: 10. Build Packages
@@ -94,6 +94,7 @@ jobs:
         env:
           DISPLAY: ":99"
         run: |
+          source /opt/ros/humble/setup.bash
           source install/setup.bash
           colcon test --packages-select my_robot_pkg \
             --event-handlers console_direct+ \
@@ -105,17 +106,26 @@ jobs:
           echo "## 🤖 CI 테스트 결과 보고서" > report.md; echo "" >> report.md
           XML_FILE="build/my_robot_pkg/pytest.xml"
           if [ -f "$XML_FILE" ]; then
-            TEST_COUNT=$(grep -oP '(?<=tests=")\d+' "$XML_FILE"); ERROR_COUNT=$(grep -oP '(?<=errors=")\d+' "$XML_FILE"); FAILURE_COUNT=$(grep -oP '(?<=failures=")\d+' "$XML_FILE")
-            echo "### 📝 테스트 요약" >> report.md; echo "- **총 테스트**: $TEST_COUNT 개" >> report.md; echo "- **에러**: $ERROR_COUNT 개" >> report.md; echo "- **실패**: $FAILURE_COUNT 개" >> report.md; echo "" >> report.md
+            TEST_COUNT=$(grep -oP '(?<=tests=")\d+' "$XML_FILE")
+            ERROR_COUNT=$(grep -oP '(?<=errors=")\d+' "$XML_FILE")
+            FAILURE_COUNT=$(grep -oP '(?<=failures=")\d+' "$XML_FILE")
+            echo "### 📝 테스트 요약" >> report.md
+            echo "- **총 테스트**: $TEST_COUNT 개" >> report.md
+            echo "- **에러**: $ERROR_COUNT 개" >> report.md
+            echo "- **실패**: $FAILURE_COUNT 개" >> report.md
+            echo "" >> report.md
             if [ "$ERROR_COUNT" -gt 0 ] || [ "$FAILURE_COUNT" -gt 0 ]; then
-              echo "### ❌ 실패/에러 상세 내용" >> report.md; echo "\`\`\`xml" >> report.md
+              echo "### ❌ 실패/에러 상세 내용" >> report.md
+              echo "\`\`\`xml" >> report.md
               sed -n '/<testcase/,/<\/testcase>/p' "$XML_FILE" | grep -E "<failure|<error" -B 10 -A 10 >> report.md
               echo "\`\`\`" >> report.md
             else
               echo "### ✅ 모든 테스트를 통과했습니다!" >> report.md
             fi
           else
-            echo "### ⚠️ 테스트 결과 파일 없음" >> report.md; echo "테스트 결과 파일($XML_FILE)을 찾을 수 없습니다." >> report.md; echo "이전 단계에서 심각한 오류가 발생하여 테스트가 실행되지 않았을 수 있습니다." >> report.md
+            echo "### ⚠️ 테스트 결과 파일 없음" >> report.md
+            echo "테스트 결과 파일($XML_FILE)을 찾을 수 없습니다." >> report.md
+            echo "이전 단계에서 심각한 오류가 발생하여 테스트가 실행되지 않았을 수 있습니다." >> report.md
           fi
           cat report.md >> $GITHUB_STEP_SUMMARY
 
@@ -129,3 +139,4 @@ jobs:
             install/
             log/
             report.md
+
