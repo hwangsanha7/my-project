@@ -37,9 +37,9 @@ jobs:
           pip install pylint
           if [ -f src/requirements.txt ]; then pip install -r src/requirements.txt; fi
 
-      - name: 4.1. Install colcon linter via pip
-        run: |
-          pip install colcon-lint-ament
+      # Removed colcon-lint-ament installation step as it caused errors
+      # Alternatively, ensure the correct package name and verify its availability
+      # Replace with other linters if necessary
 
       - name: 5. Restore ROS cache
         id: cache-ros
@@ -53,7 +53,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-ros-humble-
 
-      # 6. ROS 2 및 시스템 의존성 설치
       - name: 6. Set up ROS 2 and Install Dependencies
         run: |
           sudo apt-get update
@@ -64,7 +63,6 @@ jobs:
           
           sudo apt-get update
           
-          # python3-colcon-lint-ament 제거, 대신 필요한 패키지만 설치합니다.
           sudo apt-get install -y ros-dev-tools python3-colcon-common-extensions xvfb
           
           sudo rosdep init || true
